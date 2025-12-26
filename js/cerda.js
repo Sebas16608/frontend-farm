@@ -10,7 +10,7 @@ const fechaNac = document.getElementById("fechaNac");
 const tablaControles = document.getElementById("tablaControles");
 const formControl = document.getElementById("formControl");
 
-// Mostrar info de la cerda y sus controles
+// Cargar cerda y sus controles
 async function cargarCerda() {
     const res = await fetch(API_CERDA);
     const cerda = await res.json();
@@ -19,20 +19,27 @@ async function cargarCerda() {
     estadoCerda.textContent = cerda.estado;
     fechaNac.textContent = cerda.fecha_nacimiento;
 
+    mostrarControles(cerda.controles_celo || []);
+}
+
+// Mostrar controles de celo en la tabla con botones Editar/Eliminar
+function mostrarControles(controles) {
     tablaControles.innerHTML = "";
-    if (cerda.controles_celo && cerda.controles_celo.length > 0) {
-        cerda.controles_celo.forEach(c => {
-            const row = document.createElement("tr");
-            row.innerHTML = `
-                <td>${c.fecha_celo}</td>
-                <td>${c.en_celo ? "Sí" : "No"}</td>
-                <td>${c.observaciones}</td>
-                <td>${c.fecha_proximo_celo || "-"}</td>
-                <td>${c.fecha_servicio_recomendada || "-"}</td>
-            `;
-            tablaControles.appendChild(row);
-        });
-    }
+    controles.forEach(c => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td>${c.fecha_celo}</td>
+            <td>${c.en_celo ? "Sí" : "No"}</td>
+            <td>${c.observaciones}</td>
+            <td>${c.fecha_proximo_celo || "-"}</td>
+            <td>${c.fecha_servicio_recomendada || "-"}</td>
+            <td>
+                <button class="btn btn-sm btn-warning me-1" onclick="editarCelo(${c.id})">Editar</button>
+                <button class="btn btn-sm btn-danger" onclick="eliminarCelo(${c.id})">Eliminar</button>
+            </td>
+        `;
+        tablaControles.appendChild(row);
+    });
 }
 
 // Agregar nuevo control de celo
@@ -58,5 +65,38 @@ formControl.addEventListener("submit", async (e) => {
         alert("Error al agregar control");
     }
 });
+
+// Editar control de celo
+window.editarCelo = async (id) => {
+    const fecha = prompt("Nueva fecha de celo (YYYY-MM-DD)");
+    const obs = prompt("Nueva observación");
+    if (!fecha) return;
+
+    const res = await fetch(`${API_CELO}${id}/`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fecha_celo: fecha, observaciones: obs })
+    });
+
+    if (res.ok) {
+        alert("Control actualizado");
+        cargarCerda();
+    } else {
+        alert("Error al actualizar control");
+    }
+};
+
+// Eliminar control de celo
+window.eliminarCelo = async (id) => {
+    if (!confirm("¿Eliminar este control?")) return;
+
+    const res = await fetch(`${API_CELO}${id}/`, { method: "DELETE" });
+    if (res.ok) {
+        alert("Control eliminado");
+        cargarCerda();
+    } else {
+        alert("Error al eliminar control");
+    }
+};
 
 cargarCerda();
